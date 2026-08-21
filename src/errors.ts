@@ -100,12 +100,7 @@ const DROPPED_REASONING_MESSAGE =
   "pass response.toInput() (or include encrypted reasoning)";
 
 export function rewriteStatusMessage(status: number, message: string): string {
-  if (
-    status === 400 &&
-    /encrypted_content|encrypted reasoning|dropped reason(?:ing)?|missing (?:encrypted )?reason(?:ing)?/i.test(
-      message,
-    )
-  ) {
+  if (status === 400 && /encrypted_content|encrypted reasoning|dropped reasoning/i.test(message)) {
     return DROPPED_REASONING_MESSAGE;
   }
   return message;
