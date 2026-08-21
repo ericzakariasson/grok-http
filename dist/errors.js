@@ -74,7 +74,7 @@ export class OverloadedError extends APIStatusError {
 const DROPPED_REASONING_MESSAGE = "pass response.toInput() (or include encrypted reasoning)";
 export function rewriteStatusMessage(status, message) {
     if (status === 400 &&
-        /encrypted_content|encrypted reasoning|dropped reason(?:ing)?|missing (?:encrypted )?reason(?:ing)?/i.test(message)) {
+        /encrypted_content|encrypted reasoning|dropped reason(?:ing)?|missing (?:encrypted )?reason(?:ing)?\b/i.test(message)) {
         return DROPPED_REASONING_MESSAGE;
     }
     return message;

@@ -56,12 +56,12 @@ describe("typed errors", () => {
   });
 
   it("keeps unrelated 400s that mention reasoning_effort", async () => {
-    const err = await client(400, {
-      error: { message: "invalid reasoning_effort: banana" },
-    })
-      .responses.create(createBody)
-      .catch((e: unknown) => e as APIError);
-    expect(err.message).toBe("invalid reasoning_effort: banana");
+    for (const message of ["invalid reasoning_effort: banana", "missing reasoning_effort"]) {
+      const err = await client(400, { error: { message } })
+        .responses.create(createBody)
+        .catch((e: unknown) => e as APIError);
+      expect(err.message).toBe(message);
+    }
   });
 
   it("maps TimeoutError DOMExceptions to TimeoutError, not AbortError", async () => {

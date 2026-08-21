@@ -102,7 +102,7 @@ const DROPPED_REASONING_MESSAGE =
 export function rewriteStatusMessage(status: number, message: string): string {
   if (
     status === 400 &&
-    /encrypted_content|encrypted reasoning|dropped reason(?:ing)?|missing (?:encrypted )?reason(?:ing)?/i.test(
+    /encrypted_content|encrypted reasoning|dropped reason(?:ing)?|missing (?:encrypted )?reason(?:ing)?\b/i.test(
       message,
     )
   ) {
