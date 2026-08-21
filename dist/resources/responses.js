@@ -52,12 +52,13 @@ export class InputItems {
     constructor(client) {
         this.client = client;
     }
-    async list(id, query = {}, opts) {
+    async list(id, opts) {
+        const { after, before, limit, ...requestOpts } = opts ?? {};
         const result = await send(this.client, {
             method: "GET",
             path: `/responses/${encodeURIComponent(id)}/input_items`,
-            query,
-            opts,
+            query: { after, before, limit },
+            opts: requestOpts,
         });
         const body = (result.payload ?? { object: "list", data: [] });
         return Object.assign(body, { http: result.http });

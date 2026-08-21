@@ -55,6 +55,34 @@ describe("typed errors", () => {
     expect(err.message).toBe("pass response.toInput() (or include encrypted reasoning)");
   });
 
+  it("keeps unrelated 400s that mention reasoning_effort", async () => {
+    const err = await client(400, {
+      error: { message: "invalid reasoning_effort: banana" },
+    })
+      .responses.create(createBody)
+      .catch((e: unknown) => e as APIError);
+    expect(err.message).toBe("invalid reasoning_effort: banana");
+  });
+
+  it("maps TimeoutError DOMExceptions to TimeoutError, not AbortError", async () => {
+    const { fetch } = mockFetch(
+      () =>
+        new Response(
+          new ReadableStream({
+            pull(controller) {
+              controller.error(new DOMException("The operation timed out", "TimeoutError"));
+            },
+          }),
+          { status: 200, headers: { "content-type": "application/json", "x-request-id": "req_test" } },
+        ),
+    );
+    const err = await new Xai({ apiKey: "k", fetch, maxRetries: 0 })
+      .responses.create(createBody)
+      .catch((e: unknown) => e as APIError);
+    expect(err).toBeInstanceOf(TimeoutError);
+    expect(err.isAbort()).toBe(false);
+  });
+
   it("times out idle JSON reads as TimeoutError", async () => {
     const { fetch } = mockFetch(
       () =>

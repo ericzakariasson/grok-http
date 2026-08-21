@@ -288,7 +288,11 @@ async function readOnce(reader, idleTimeout, signal, requestId) {
             signal?.removeEventListener("abort", onAbort);
             if (idle !== undefined)
                 clearTimeout(idle);
-            reject(err);
+            if (signal?.aborted) {
+                reject(errorFromAbort(signal, requestId));
+                return;
+            }
+            reject(errorFromUnknown(err, requestId));
         });
     });
 }

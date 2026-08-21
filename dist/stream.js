@@ -146,6 +146,28 @@ export class XaiStream {
                 this.#setArgs(e.output_index ?? 0, e.arguments);
                 break;
             }
+            case "response.reasoning_text.delta": {
+                const e = event;
+                this.#appendReasoningText(e.output_index ?? 0, e.content_index ?? 0, e.delta);
+                break;
+            }
+            case "response.reasoning_text.done": {
+                const e = event;
+                if (typeof e.text === "string")
+                    this.#setReasoningText(e.output_index ?? 0, e.content_index ?? 0, e.text);
+                break;
+            }
+            case "response.reasoning_summary_text.delta": {
+                const e = event;
+                this.#appendReasoningSummary(e.output_index ?? 0, e.summary_index ?? 0, e.delta);
+                break;
+            }
+            case "response.reasoning_summary_text.done": {
+                const e = event;
+                if (typeof e.text === "string")
+                    this.#setReasoningSummary(e.output_index ?? 0, e.summary_index ?? 0, e.text);
+                break;
+            }
             case "error": {
                 const err = event.error;
                 if (err instanceof OverloadedError || err instanceof TimeoutError)
@@ -240,6 +262,64 @@ export class XaiStream {
         const item = this.#ensureItem(index);
         item.type = "function_call";
         item.arguments = args;
+    }
+    #ensureReasoning(index) {
+        const item = this.#ensureItem(index);
+        item.type = "reasoning";
+        delete item.role;
+        if (!Array.isArray(item.summary))
+            item.summary = [];
+        return item;
+    }
+    #appendReasoningText(index, contentIndex, delta) {
+        const item = this.#ensureReasoning(index);
+        const content = Array.isArray(item.content) ? [...item.content] : [];
+        while (content.length <= contentIndex)
+            content.push({ type: "reasoning_text", text: "" });
+        const part = content[contentIndex];
+        if (isRecord(part) && part.type === "reasoning_text") {
+            content[contentIndex] = {
+                ...part,
+                text: `${typeof part.text === "string" ? part.text : ""}${delta}`,
+            };
+        }
+        else {
+            content[contentIndex] = { type: "reasoning_text", text: delta };
+        }
+        item.content = content;
+    }
+    #setReasoningText(index, contentIndex, text) {
+        const item = this.#ensureReasoning(index);
+        const content = Array.isArray(item.content) ? [...item.content] : [];
+        while (content.length <= contentIndex)
+            content.push({ type: "reasoning_text", text: "" });
+        content[contentIndex] = { type: "reasoning_text", text };
+        item.content = content;
+    }
+    #appendReasoningSummary(index, summaryIndex, delta) {
+        const item = this.#ensureReasoning(index);
+        const summary = Array.isArray(item.summary) ? [...item.summary] : [];
+        while (summary.length <= summaryIndex)
+            summary.push({ type: "summary_text", text: "" });
+        const part = summary[summaryIndex];
+        if (isRecord(part) && part.type === "summary_text") {
+            summary[summaryIndex] = {
+                ...part,
+                text: `${typeof part.text === "string" ? part.text : ""}${delta}`,
+            };
+        }
+        else {
+            summary[summaryIndex] = { type: "summary_text", text: delta };
+        }
+        item.summary = summary;
+    }
+    #setReasoningSummary(index, summaryIndex, text) {
+        const item = this.#ensureReasoning(index);
+        const summary = Array.isArray(item.summary) ? [...item.summary] : [];
+        while (summary.length <= summaryIndex)
+            summary.push({ type: "summary_text", text: "" });
+        summary[summaryIndex] = { type: "summary_text", text };
+        item.summary = summary;
     }
 }
 //# sourceMappingURL=stream.js.map

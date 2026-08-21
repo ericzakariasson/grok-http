@@ -54,6 +54,7 @@ export declare function errorFromStatus(status: number, message: string, init?: 
 export declare function errorFromResponse(res: Response, body?: unknown): Promise<APIStatusError>;
 export declare function errorFromAbort(signal: AbortSignal, request_id: string | null): APIError;
 export declare function errorFromUnknown(err: unknown, request_id: string | null): APIError;
+export declare function isTimeoutLike(err: unknown): boolean;
 export declare function isAbortLike(err: unknown): boolean;
 export declare function streamErrorEvent(raw: Record<string, unknown>, request_id: string | null): {
     event: Record<string, unknown>;
