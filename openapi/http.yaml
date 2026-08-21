@@ -1,0 +1,1373 @@
+openapi: 3.1.0
+info:
+  title: Grok HTTP Responses API
+  version: "1"
+  description: >
+    Slim wire spec for POST/GET/DELETE /v1/responses, GET /v1/responses/{id}/input_items,
+    GET /v1/models, and GET /v1/models/{id}. Fields the server ignores are omitted.
+    Usage is required on completed responses, including streams.
+servers:
+  - url: https://api.x.ai
+security:
+  - BearerAuth: []
+tags:
+  - name: Responses
+  - name: Models
+paths:
+  /v1/responses:
+    post:
+      tags: [Responses]
+      operationId: createResponse
+      summary: Create a model response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateResponseRequest"
+      responses:
+        "200":
+          description: Completed JSON response, or SSE when stream=true
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseObject"
+            text/event-stream:
+              schema:
+                type: string
+                description: >
+                  Server-sent events when stream=true. Event names follow OpenAI Responses
+                  style (response.output_text.delta, response.completed, response.failed,
+                  ping, error, item deltas). Terminated by data: [DONE].
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        "429":
+          $ref: "#/components/responses/Error"
+        "529":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/responses/{response_id}:
+    parameters:
+      - $ref: "#/components/parameters/ResponseId"
+    get:
+      tags: [Responses]
+      operationId: getResponse
+      summary: Retrieve a stored response (requires store=true at create)
+      responses:
+        "200":
+          description: Stored response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResponseObject"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+    delete:
+      tags: [Responses]
+      operationId: deleteResponse
+      summary: Delete a stored response
+      responses:
+        "200":
+          description: Delete confirmation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeletedResponse"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/responses/{response_id}/input_items:
+    get:
+      tags: [Responses]
+      operationId: listInputItems
+      summary: List input items for a stored response
+      parameters:
+        - $ref: "#/components/parameters/ResponseId"
+        - name: after
+          in: query
+          schema:
+            type: string
+        - name: before
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        "200":
+          description: Input item list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InputItemList"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/models:
+    get:
+      tags: [Models]
+      operationId: listModels
+      summary: List models available to the authenticating key
+      responses:
+        "200":
+          description: Model list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelList"
+        "401":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+  /v1/models/{model_id}:
+    get:
+      tags: [Models]
+      operationId: getModel
+      summary: Get a model by id
+      parameters:
+        - name: model_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Model"
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+        default:
+          $ref: "#/components/responses/Error"
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+  parameters:
+    ResponseId:
+      name: response_id
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    Error:
+      description: Error
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorBody"
+  schemas:
+    IncludeField:
+      type: string
+      enum:
+        - reasoning.encrypted_content
+      description: Additional output to include. Wire ignores unknown OpenAI compat values.
+    CreateResponseRequest:
+      type: object
+      required:
+        - model
+        - input
+      properties:
+        model:
+          type: string
+        input:
+          $ref: "#/components/schemas/Input"
+        instructions:
+          type:
+            - string
+            - "null"
+        include:
+          type:
+            - array
+            - "null"
+          items:
+            $ref: "#/components/schemas/IncludeField"
+        max_output_tokens:
+          type:
+            - integer
+            - "null"
+        max_turns:
+          type:
+            - integer
+            - "null"
+        min_p:
+          type:
+            - number
+            - "null"
+        parallel_tool_calls:
+          type:
+            - boolean
+            - "null"
+        previous_response_id:
+          type:
+            - string
+            - "null"
+        prompt_cache_key:
+          type:
+            - string
+            - "null"
+        reasoning:
+          $ref: "#/components/schemas/ReasoningConfig"
+        reasoning_effort:
+          type:
+            - string
+            - "null"
+          enum:
+            - none
+            - low
+            - medium
+            - high
+            - null
+        search_parameters:
+          $ref: "#/components/schemas/SearchParameters"
+        service_tier:
+          type:
+            - string
+            - "null"
+          enum:
+            - default
+            - priority
+            - null
+        store:
+          type:
+            - boolean
+            - "null"
+          description: >
+            Wire default is true (stored 30 days). This client defaults to false.
+        stream:
+          type:
+            - boolean
+            - "null"
+          default: false
+          description: When true, the response is text/event-stream.
+        temperature:
+          type:
+            - number
+            - "null"
+        text:
+          $ref: "#/components/schemas/TextConfig"
+        tool_choice:
+          $ref: "#/components/schemas/ToolChoice"
+        tools:
+          type:
+            - array
+            - "null"
+          items:
+            $ref: "#/components/schemas/Tool"
+        top_k:
+          type:
+            - integer
+            - "null"
+        top_p:
+          type:
+            - number
+            - "null"
+        user:
+          type:
+            - string
+            - "null"
+    Input:
+      oneOf:
+        - type: string
+        - type: array
+          items:
+            $ref: "#/components/schemas/InputItem"
+    InputItem:
+      oneOf:
+        - $ref: "#/components/schemas/EasyInputMessage"
+        - $ref: "#/components/schemas/InputMessage"
+        - $ref: "#/components/schemas/ReasoningItem"
+        - $ref: "#/components/schemas/FunctionCallItem"
+        - $ref: "#/components/schemas/FunctionCallOutputItem"
+        - $ref: "#/components/schemas/WebSearchCallItem"
+        - $ref: "#/components/schemas/XSearchCallItem"
+    EasyInputMessage:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          $ref: "#/components/schemas/MessageRole"
+        content:
+          $ref: "#/components/schemas/InputMessageContent"
+        type:
+          type: string
+          const: message
+    InputMessage:
+      type: object
+      required:
+        - type
+        - role
+        - content
+      properties:
+        type:
+          type: string
+          const: message
+        role:
+          $ref: "#/components/schemas/MessageRole"
+        content:
+          $ref: "#/components/schemas/InputMessageContent"
+        id:
+          type: string
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+    MessageRole:
+      type: string
+      enum:
+        - user
+        - assistant
+        - system
+        - developer
+    InputMessageContent:
+      oneOf:
+        - type: string
+        - type: array
+          items:
+            $ref: "#/components/schemas/InputContentPart"
+    InputContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/InputText"
+        - $ref: "#/components/schemas/InputImage"
+        - $ref: "#/components/schemas/OutputText"
+    InputText:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          const: input_text
+        text:
+          type: string
+    InputImage:
+      type: object
+      required:
+        - type
+        - image_url
+      properties:
+        type:
+          type: string
+          const: input_image
+        image_url:
+          type: string
+          description: HTTPS URL or data URL (porcelain Blob/File is inlined to a data URL before send).
+        detail:
+          type: string
+          enum:
+            - auto
+            - low
+            - high
+    OutputText:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          const: output_text
+        text:
+          type: string
+        annotations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Annotation"
+    Annotation:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+        url:
+          type: string
+        title:
+          type: string
+        start_index:
+          type: integer
+        end_index:
+          type: integer
+      additionalProperties: true
+    ReasoningItem:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: reasoning
+        id:
+          type: string
+        summary:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReasoningSummaryPart"
+        encrypted_content:
+          type:
+            - string
+            - "null"
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+    ReasoningSummaryPart:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          const: summary_text
+        text:
+          type: string
+    FunctionCallItem:
+      type: object
+      required:
+        - type
+        - name
+        - arguments
+        - call_id
+      properties:
+        type:
+          type: string
+          const: function_call
+        id:
+          type: string
+        call_id:
+          type: string
+        name:
+          type: string
+        arguments:
+          type: string
+          description: JSON object as a string. Stream deltas are fragments; parse at output_item.done.
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+    FunctionCallOutputItem:
+      type: object
+      required:
+        - type
+        - call_id
+        - output
+      properties:
+        type:
+          type: string
+          const: function_call_output
+        call_id:
+          type: string
+        output:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                $ref: "#/components/schemas/InputContentPart"
+        id:
+          type: string
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+    WebSearchCallItem:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: web_search_call
+        id:
+          type: string
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+        action:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+    XSearchCallItem:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: x_search_call
+        id:
+          type: string
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+        action:
+          type: object
+          additionalProperties: true
+      additionalProperties: true
+    ItemStatus:
+      type: string
+      enum:
+        - in_progress
+        - completed
+        - incomplete
+        - failed
+        - incomplete_expired
+    ReasoningConfig:
+      type: object
+      properties:
+        effort:
+          type:
+            - string
+            - "null"
+          enum:
+            - none
+            - low
+            - medium
+            - high
+            - null
+    SearchParameters:
+      type: object
+      properties:
+        from_date:
+          type:
+            - string
+            - "null"
+        to_date:
+          type:
+            - string
+            - "null"
+        max_search_results:
+          type:
+            - integer
+            - "null"
+        mode:
+          type:
+            - string
+            - "null"
+          enum:
+            - off
+            - on
+            - auto
+            - null
+        return_citations:
+          type:
+            - boolean
+            - "null"
+        sources:
+          type:
+            - array
+            - "null"
+          items:
+            type: object
+            additionalProperties: true
+    TextConfig:
+      type: object
+      properties:
+        format:
+          $ref: "#/components/schemas/TextFormat"
+    TextFormat:
+      oneOf:
+        - $ref: "#/components/schemas/TextFormatText"
+        - $ref: "#/components/schemas/TextFormatJsonObject"
+        - $ref: "#/components/schemas/TextFormatJsonSchema"
+    TextFormatText:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: text
+    TextFormatJsonObject:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: json_object
+    TextFormatJsonSchema:
+      type: object
+      required:
+        - type
+        - name
+        - schema
+      properties:
+        type:
+          type: string
+          const: json_schema
+        name:
+          type: string
+        description:
+          type: string
+        schema:
+          type: object
+          additionalProperties: true
+        strict:
+          type: boolean
+    ToolChoice:
+      oneOf:
+        - type: string
+          enum:
+            - auto
+            - none
+            - required
+        - type: object
+          required:
+            - type
+            - name
+          properties:
+            type:
+              type: string
+              const: function
+            name:
+              type: string
+        - type: object
+          required:
+            - type
+          properties:
+            type:
+              type: string
+            name:
+              type: string
+          additionalProperties: true
+    Tool:
+      oneOf:
+        - $ref: "#/components/schemas/FunctionTool"
+        - $ref: "#/components/schemas/WebSearchTool"
+        - $ref: "#/components/schemas/XSearchTool"
+    FunctionTool:
+      type: object
+      required:
+        - type
+        - name
+      properties:
+        type:
+          type: string
+          const: function
+        name:
+          type: string
+        description:
+          type: string
+        parameters:
+          type: object
+          additionalProperties: true
+        strict:
+          type: boolean
+    WebSearchTool:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: web_search
+      additionalProperties: true
+    XSearchTool:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: x_search
+      additionalProperties: true
+    ResponseObject:
+      type: object
+      required:
+        - id
+        - status
+        - output
+        - usage
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          const: response
+        created_at:
+          type: integer
+        completed_at:
+          type:
+            - integer
+            - "null"
+        status:
+          $ref: "#/components/schemas/ResponseStatus"
+        model:
+          type: string
+        output:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutputItem"
+        incomplete_details:
+          oneOf:
+            - $ref: "#/components/schemas/IncompleteDetails"
+            - type: "null"
+        usage:
+          $ref: "#/components/schemas/Usage"
+        error:
+          oneOf:
+            - $ref: "#/components/schemas/ResponseError"
+            - type: "null"
+        instructions:
+          type:
+            - string
+            - "null"
+        max_output_tokens:
+          type:
+            - integer
+            - "null"
+        parallel_tool_calls:
+          type: boolean
+        previous_response_id:
+          type:
+            - string
+            - "null"
+        prompt_cache_key:
+          type:
+            - string
+            - "null"
+        reasoning:
+          oneOf:
+            - $ref: "#/components/schemas/ReasoningConfig"
+            - type: "null"
+        service_tier:
+          type:
+            - string
+            - "null"
+        store:
+          type: boolean
+        temperature:
+          type:
+            - number
+            - "null"
+        text:
+          $ref: "#/components/schemas/TextConfig"
+        tool_choice:
+          $ref: "#/components/schemas/ToolChoice"
+        tools:
+          type: array
+          items:
+            $ref: "#/components/schemas/Tool"
+        top_p:
+          type:
+            - number
+            - "null"
+        user:
+          type:
+            - string
+            - "null"
+    ResponseStatus:
+      type: string
+      enum:
+        - completed
+        - in_progress
+        - incomplete
+        - failed
+    IncompleteDetails:
+      type: object
+      properties:
+        reason:
+          type: string
+          enum:
+            - max_output_tokens
+            - content_filter
+      additionalProperties: true
+    ResponseError:
+      type: object
+      properties:
+        code:
+          type:
+            - string
+            - "null"
+        message:
+          type: string
+      additionalProperties: true
+    OutputItem:
+      oneOf:
+        - $ref: "#/components/schemas/OutputMessage"
+        - $ref: "#/components/schemas/ReasoningItem"
+        - $ref: "#/components/schemas/FunctionCallItem"
+        - $ref: "#/components/schemas/WebSearchCallItem"
+        - $ref: "#/components/schemas/XSearchCallItem"
+    OutputMessage:
+      type: object
+      required:
+        - type
+        - role
+        - content
+      properties:
+        type:
+          type: string
+          const: message
+        id:
+          type: string
+        role:
+          type: string
+          const: assistant
+        status:
+          $ref: "#/components/schemas/ItemStatus"
+        content:
+          type: array
+          items:
+            $ref: "#/components/schemas/OutputContentPart"
+    OutputContentPart:
+      oneOf:
+        - $ref: "#/components/schemas/OutputText"
+        - $ref: "#/components/schemas/Refusal"
+    Refusal:
+      type: object
+      required:
+        - type
+        - refusal
+      properties:
+        type:
+          type: string
+          const: refusal
+        refusal:
+          type: string
+    Usage:
+      type: object
+      required:
+        - input_tokens
+        - output_tokens
+        - total_tokens
+        - input_tokens_details
+        - output_tokens_details
+        - num_sources_used
+        - num_server_side_tools_used
+      properties:
+        input_tokens:
+          type: integer
+        output_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+        input_tokens_details:
+          type: object
+          required:
+            - cached_tokens
+          properties:
+            cached_tokens:
+              type: integer
+        output_tokens_details:
+          type: object
+          required:
+            - reasoning_tokens
+          properties:
+            reasoning_tokens:
+              type: integer
+        num_sources_used:
+          type: integer
+        num_server_side_tools_used:
+          type: integer
+        cost_in_nano_usd:
+          type:
+            - integer
+            - "null"
+        cost_in_usd_ticks:
+          type:
+            - integer
+            - "null"
+        server_side_tool_usage_details:
+          $ref: "#/components/schemas/ServerSideToolUsageDetails"
+    ServerSideToolUsageDetails:
+      type: object
+      properties:
+        code_interpreter_calls:
+          type: integer
+        document_search_calls:
+          type: integer
+        file_search_calls:
+          type: integer
+        image_generation_calls:
+          type: integer
+        mcp_calls:
+          type: integer
+        web_search_calls:
+          type: integer
+        x_search_calls:
+          type: integer
+      additionalProperties: true
+    DeletedResponse:
+      type: object
+      required:
+        - id
+        - object
+        - deleted
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          const: response
+        deleted:
+          type: boolean
+    InputItemList:
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          type: string
+          const: list
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/InputItem"
+        first_id:
+          type:
+            - string
+            - "null"
+        last_id:
+          type:
+            - string
+            - "null"
+        has_more:
+          type: boolean
+    Model:
+      type: object
+      required:
+        - id
+        - object
+        - created
+        - owned_by
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          const: model
+        created:
+          type: integer
+        owned_by:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
+        context_length:
+          type:
+            - integer
+            - "null"
+        prompt_text_token_price:
+          type:
+            - integer
+            - "null"
+        cached_prompt_text_token_price:
+          type:
+            - integer
+            - "null"
+        prompt_image_token_price:
+          type:
+            - integer
+            - "null"
+        completion_text_token_price:
+          type:
+            - integer
+            - "null"
+        prompt_text_token_price_long_context:
+          type:
+            - integer
+            - "null"
+        cached_prompt_text_token_price_long_context:
+          type:
+            - integer
+            - "null"
+        completion_text_token_price_long_context:
+          type:
+            - integer
+            - "null"
+        long_context_threshold:
+          type:
+            - integer
+            - "null"
+        image_price:
+          type:
+            - integer
+            - "null"
+        pricing:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ModelList:
+      type: object
+      required:
+        - object
+        - data
+      properties:
+        object:
+          type: string
+          const: list
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Model"
+    ErrorBody:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type:
+                - string
+                - "null"
+          additionalProperties: true
+      additionalProperties: true
+    StreamEvent:
+      description: Wire SSE event objects (plus SDK unknown at runtime).
+      oneOf:
+        - $ref: "#/components/schemas/PingEvent"
+        - $ref: "#/components/schemas/ErrorEvent"
+        - $ref: "#/components/schemas/ResponseCreatedEvent"
+        - $ref: "#/components/schemas/ResponseInProgressEvent"
+        - $ref: "#/components/schemas/ResponseCompletedEvent"
+        - $ref: "#/components/schemas/ResponseFailedEvent"
+        - $ref: "#/components/schemas/ResponseIncompleteEvent"
+        - $ref: "#/components/schemas/OutputItemAddedEvent"
+        - $ref: "#/components/schemas/OutputItemDoneEvent"
+        - $ref: "#/components/schemas/ContentPartAddedEvent"
+        - $ref: "#/components/schemas/ContentPartDoneEvent"
+        - $ref: "#/components/schemas/OutputTextDeltaEvent"
+        - $ref: "#/components/schemas/OutputTextDoneEvent"
+        - $ref: "#/components/schemas/ReasoningTextDeltaEvent"
+        - $ref: "#/components/schemas/ReasoningTextDoneEvent"
+        - $ref: "#/components/schemas/ReasoningSummaryTextDeltaEvent"
+        - $ref: "#/components/schemas/ReasoningSummaryTextDoneEvent"
+        - $ref: "#/components/schemas/FunctionCallArgumentsDeltaEvent"
+        - $ref: "#/components/schemas/FunctionCallArgumentsDoneEvent"
+    PingEvent:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: ping
+    ErrorEvent:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: error
+        code:
+          type:
+            - string
+            - integer
+            - "null"
+        message:
+          type: string
+        param:
+          type:
+            - string
+            - "null"
+        sequence_number:
+          type: integer
+    ResponseCreatedEvent:
+      type: object
+      required:
+        - type
+        - response
+      properties:
+        type:
+          type: string
+          const: response.created
+        response:
+          $ref: "#/components/schemas/ResponseObject"
+        sequence_number:
+          type: integer
+    ResponseInProgressEvent:
+      type: object
+      required:
+        - type
+        - response
+      properties:
+        type:
+          type: string
+          const: response.in_progress
+        response:
+          $ref: "#/components/schemas/ResponseObject"
+        sequence_number:
+          type: integer
+    ResponseCompletedEvent:
+      type: object
+      required:
+        - type
+        - response
+      properties:
+        type:
+          type: string
+          const: response.completed
+        response:
+          $ref: "#/components/schemas/ResponseObject"
+        sequence_number:
+          type: integer
+    ResponseFailedEvent:
+      type: object
+      required:
+        - type
+        - response
+      properties:
+        type:
+          type: string
+          const: response.failed
+        response:
+          $ref: "#/components/schemas/ResponseObject"
+        sequence_number:
+          type: integer
+    ResponseIncompleteEvent:
+      type: object
+      required:
+        - type
+        - response
+      properties:
+        type:
+          type: string
+          const: response.incomplete
+        response:
+          $ref: "#/components/schemas/ResponseObject"
+        sequence_number:
+          type: integer
+    OutputItemAddedEvent:
+      type: object
+      required:
+        - type
+        - item
+        - output_index
+      properties:
+        type:
+          type: string
+          const: response.output_item.added
+        item:
+          $ref: "#/components/schemas/OutputItem"
+        output_index:
+          type: integer
+        sequence_number:
+          type: integer
+    OutputItemDoneEvent:
+      type: object
+      required:
+        - type
+        - item
+        - output_index
+      properties:
+        type:
+          type: string
+          const: response.output_item.done
+        item:
+          $ref: "#/components/schemas/OutputItem"
+        output_index:
+          type: integer
+        sequence_number:
+          type: integer
+    ContentPartAddedEvent:
+      type: object
+      required:
+        - type
+        - output_index
+        - content_index
+        - part
+      properties:
+        type:
+          type: string
+          const: response.content_part.added
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        content_index:
+          type: integer
+        part:
+          $ref: "#/components/schemas/OutputContentPart"
+        sequence_number:
+          type: integer
+    ContentPartDoneEvent:
+      type: object
+      required:
+        - type
+        - output_index
+        - content_index
+        - part
+      properties:
+        type:
+          type: string
+          const: response.content_part.done
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        content_index:
+          type: integer
+        part:
+          $ref: "#/components/schemas/OutputContentPart"
+        sequence_number:
+          type: integer
+    OutputTextDeltaEvent:
+      type: object
+      required:
+        - type
+        - delta
+      properties:
+        type:
+          type: string
+          const: response.output_text.delta
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        content_index:
+          type: integer
+        delta:
+          type: string
+        sequence_number:
+          type: integer
+    OutputTextDoneEvent:
+      type: object
+      required:
+        - type
+        - text
+      properties:
+        type:
+          type: string
+          const: response.output_text.done
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        content_index:
+          type: integer
+        text:
+          type: string
+        sequence_number:
+          type: integer
+    ReasoningTextDeltaEvent:
+      type: object
+      required:
+        - type
+        - delta
+      properties:
+        type:
+          type: string
+          const: response.reasoning_text.delta
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        delta:
+          type: string
+        sequence_number:
+          type: integer
+    ReasoningTextDoneEvent:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: response.reasoning_text.done
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        text:
+          type: string
+        sequence_number:
+          type: integer
+    ReasoningSummaryTextDeltaEvent:
+      type: object
+      required:
+        - type
+        - delta
+      properties:
+        type:
+          type: string
+          const: response.reasoning_summary_text.delta
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        delta:
+          type: string
+        sequence_number:
+          type: integer
+    ReasoningSummaryTextDoneEvent:
+      type: object
+      required:
+        - type
+      properties:
+        type:
+          type: string
+          const: response.reasoning_summary_text.done
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        text:
+          type: string
+        sequence_number:
+          type: integer
+    FunctionCallArgumentsDeltaEvent:
+      type: object
+      required:
+        - type
+        - delta
+      properties:
+        type:
+          type: string
+          const: response.function_call_arguments.delta
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        delta:
+          type: string
+        sequence_number:
+          type: integer
+    FunctionCallArgumentsDoneEvent:
+      type: object
+      required:
+        - type
+        - arguments
+      properties:
+        type:
+          type: string
+          const: response.function_call_arguments.done
+        item_id:
+          type: string
+        output_index:
+          type: integer
+        name:
+          type: string
+        arguments:
+          type: string
+        sequence_number:
+          type: integer

@@ -1,0 +1,41 @@
+{
+  "name": "@xai/sdk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Thin TypeScript client for the Grok HTTP Responses API",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "openapi",
+    "LICENSE",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ericzakariasson/grok-http.git"
+  },
+  "scripts": {
+    "generate": "openapi-typescript openapi/http.yaml -o src/generated/types.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.29",
+    "openapi-typescript": "7.10.1",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  }
+}
