@@ -73,7 +73,7 @@ export class OverloadedError extends APIStatusError {
 }
 const DROPPED_REASONING_MESSAGE = "pass response.toInput() (or include encrypted reasoning)";
 export function rewriteStatusMessage(status, message) {
-    if (status === 400 && /reason(ing)?|encrypted_content|encrypted reasoning/i.test(message)) {
+    if (status === 400 && /encrypted_content|encrypted reasoning/i.test(message)) {
         return DROPPED_REASONING_MESSAGE;
     }
     return message;
@@ -156,6 +156,12 @@ export function errorFromAbort(signal, request_id) {
 export function errorFromUnknown(err, request_id) {
     if (APIError.is(err))
         return err;
+    if (isTimeoutLike(err)) {
+        return new TimeoutError(err instanceof Error ? err.message : "Request timed out", {
+            request_id,
+            cause: err,
+        });
+    }
     if (isAbortLike(err)) {
         return new AbortError(err instanceof Error ? err.message : "Request aborted", {
             request_id,
@@ -170,8 +176,12 @@ export function isAbortLike(err) {
         return true;
     if (typeof err !== "object" || err === null)
         return false;
-    const name = err.name;
-    return name === "AbortError" || name === "TimeoutError";
+    return err.name === "AbortError";
+}
+function isTimeoutLike(err) {
+    if (typeof err !== "object" || err === null)
+        return false;
+    return err.name === "TimeoutError";
 }
 export function streamErrorEvent(raw, request_id) {
     const codeRaw = raw.code;

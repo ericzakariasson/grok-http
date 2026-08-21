@@ -136,6 +136,29 @@ export class XaiStream {
                 this.#setText(e.output_index ?? 0, e.content_index ?? 0, e.text);
                 break;
             }
+            case "response.reasoning_text.delta": {
+                const e = event;
+                this.#appendReasoningText(e.output_index ?? 0, e.content_index ?? 0, e.delta);
+                break;
+            }
+            case "response.reasoning_text.done": {
+                const e = event;
+                if (typeof e.text === "string")
+                    this.#setReasoningText(e.output_index ?? 0, e.content_index ?? 0, e.text);
+                break;
+            }
+            case "response.reasoning_summary_text.delta": {
+                const e = event;
+                this.#appendReasoningSummary(e.output_index ?? 0, e.summary_index ?? 0, e.delta);
+                break;
+            }
+            case "response.reasoning_summary_text.done": {
+                const e = event;
+                if (typeof e.text === "string") {
+                    this.#setReasoningSummary(e.output_index ?? 0, e.summary_index ?? 0, e.text);
+                }
+                break;
+            }
             case "response.function_call_arguments.delta": {
                 const e = event;
                 this.#appendArgs(e.output_index ?? 0, e.delta);
@@ -230,6 +253,71 @@ export class XaiStream {
             content.push({ type: "output_text", text: "" });
         content[contentIndex] = { type: "output_text", text };
         item.content = content;
+    }
+    #ensureReasoningItem(index) {
+        while (this.output.length <= index) {
+            this.output.push({ type: "reasoning", summary: [] });
+        }
+        const item = this.output[index];
+        if (!isRecord(item)) {
+            const next = { type: "reasoning", summary: [] };
+            this.output[index] = next;
+            return next;
+        }
+        const rec = item;
+        if (rec.type !== "reasoning")
+            rec.type = "reasoning";
+        return rec;
+    }
+    #appendReasoningText(index, contentIndex, delta) {
+        const item = this.#ensureReasoningItem(index);
+        const content = Array.isArray(item.content) ? [...item.content] : [];
+        while (content.length <= contentIndex)
+            content.push({ type: "reasoning_text", text: "" });
+        const part = content[contentIndex];
+        if (isRecord(part) && part.type === "reasoning_text") {
+            content[contentIndex] = {
+                ...part,
+                text: `${typeof part.text === "string" ? part.text : ""}${delta}`,
+            };
+        }
+        else {
+            content[contentIndex] = { type: "reasoning_text", text: delta };
+        }
+        item.content = content;
+    }
+    #setReasoningText(index, contentIndex, text) {
+        const item = this.#ensureReasoningItem(index);
+        const content = Array.isArray(item.content) ? [...item.content] : [];
+        while (content.length <= contentIndex)
+            content.push({ type: "reasoning_text", text: "" });
+        content[contentIndex] = { type: "reasoning_text", text };
+        item.content = content;
+    }
+    #appendReasoningSummary(index, summaryIndex, delta) {
+        const item = this.#ensureReasoningItem(index);
+        const summary = Array.isArray(item.summary) ? [...item.summary] : [];
+        while (summary.length <= summaryIndex)
+            summary.push({ type: "summary_text", text: "" });
+        const part = summary[summaryIndex];
+        if (isRecord(part) && part.type === "summary_text") {
+            summary[summaryIndex] = {
+                ...part,
+                text: `${typeof part.text === "string" ? part.text : ""}${delta}`,
+            };
+        }
+        else {
+            summary[summaryIndex] = { type: "summary_text", text: delta };
+        }
+        item.summary = summary;
+    }
+    #setReasoningSummary(index, summaryIndex, text) {
+        const item = this.#ensureReasoningItem(index);
+        const summary = Array.isArray(item.summary) ? [...item.summary] : [];
+        while (summary.length <= summaryIndex)
+            summary.push({ type: "summary_text", text: "" });
+        summary[summaryIndex] = { type: "summary_text", text };
+        item.summary = summary;
     }
     #appendArgs(index, delta) {
         const item = this.#ensureItem(index);

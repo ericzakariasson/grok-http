@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  AbortError,
   APIError,
   AuthenticationError,
   NotFoundError,
@@ -9,6 +10,7 @@ import {
   TimeoutError,
   Xai,
 } from "../src/index.js";
+import { errorFromUnknown } from "../src/errors.js";
 import { createBody, jsonResponse, mockFetch } from "./helpers.js";
 
 describe("typed errors", () => {
@@ -53,6 +55,21 @@ describe("typed errors", () => {
       .responses.create(createBody)
       .catch((e: unknown) => e as APIError);
     expect(err.message).toBe("pass response.toInput() (or include encrypted reasoning)");
+  });
+
+  it("does not rewrite 400s that merely mention reason or reasoning_effort", async () => {
+    const message = "invalid reasoning_effort: must be low, medium, or high";
+    const err = await client(400, { error: { message } })
+      .responses.create(createBody)
+      .catch((e: unknown) => e as APIError);
+    expect(err.message).toBe(message);
+  });
+
+  it("maps TimeoutError-named failures to TimeoutError, not AbortError", () => {
+    const err = errorFromUnknown(new DOMException("The operation timed out", "TimeoutError"), "req_1");
+    expect(err).toBeInstanceOf(TimeoutError);
+    expect(err).not.toBeInstanceOf(AbortError);
+    expect(err.message).toBe("The operation timed out");
   });
 
   it("times out idle JSON reads as TimeoutError", async () => {

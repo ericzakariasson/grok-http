@@ -28,11 +28,11 @@ export declare class Responses {
 export declare class InputItems {
     private readonly client;
     constructor(client: Xai);
-    list(id: string, query?: {
+    list(id: string, opts?: RequestOpts & {
         after?: string;
         before?: string;
         limit?: number;
-    }, opts?: RequestOpts): Promise<InputItemList & {
+    }): Promise<InputItemList & {
         http: import("../types.js").HttpMeta;
     }>;
 }

@@ -80,6 +80,39 @@ describe("responses.create stream", () => {
     expect(JSON.parse(item.arguments)).toEqual({ loc: "SF" });
   });
 
+  it("accumulates reasoning text and summary deltas onto stream.output", async () => {
+    const events = [
+      {
+        type: "response.output_item.added",
+        output_index: 0,
+        item: { type: "reasoning", id: "rs_1", summary: [], encrypted_content: null, status: "in_progress" },
+      },
+      { type: "response.reasoning_text.delta", output_index: 0, delta: "think" },
+      { type: "response.reasoning_text.delta", output_index: 0, delta: "ing" },
+      { type: "response.reasoning_summary_text.delta", output_index: 0, delta: "sum" },
+      { type: "response.reasoning_summary_text.delta", output_index: 0, delta: "mary" },
+      { type: "response.reasoning_text.done", output_index: 0, text: "thinking" },
+      { type: "response.reasoning_summary_text.done", output_index: 0, text: "summary" },
+    ];
+    const { fetch } = mockFetch(() => sseResponse(events));
+    const client = new Xai({ apiKey: "test-key", fetch, maxRetries: 0 });
+    const stream = await client.responses.create({ ...createBody, stream: true });
+    for await (const _ of stream) {
+      // drain without a response.completed snapshot
+    }
+    const item = stream.output[0] as {
+      type: string;
+      content?: Array<{ type: string; text: string }>;
+      summary?: Array<{ type: string; text: string }>;
+    };
+    expect(item.type).toBe("reasoning");
+    expect(item.content).toEqual([{ type: "reasoning_text", text: "thinking" }]);
+    expect(item.summary).toEqual([{ type: "summary_text", text: "summary" }]);
+    const echoed = stream.toInput()[0] as typeof item;
+    expect(echoed.content?.[0]?.text).toBe("thinking");
+    expect(echoed.summary?.[0]?.text).toBe("summary");
+  });
+
   it("surfaces unknown wire events as type unknown", async () => {
     const { fetch } = mockFetch(() =>
       sseResponse([

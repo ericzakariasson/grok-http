@@ -159,6 +159,28 @@ export class XaiStream implements AsyncIterable<XaiStreamEvent>, AsyncDisposable
         this.#setText(e.output_index ?? 0, e.content_index ?? 0, e.text);
         break;
       }
+      case "response.reasoning_text.delta": {
+        const e = event as { output_index?: number; content_index?: number; delta: string };
+        this.#appendReasoningText(e.output_index ?? 0, e.content_index ?? 0, e.delta);
+        break;
+      }
+      case "response.reasoning_text.done": {
+        const e = event as { output_index?: number; content_index?: number; text?: string };
+        if (typeof e.text === "string") this.#setReasoningText(e.output_index ?? 0, e.content_index ?? 0, e.text);
+        break;
+      }
+      case "response.reasoning_summary_text.delta": {
+        const e = event as { output_index?: number; summary_index?: number; delta: string };
+        this.#appendReasoningSummary(e.output_index ?? 0, e.summary_index ?? 0, e.delta);
+        break;
+      }
+      case "response.reasoning_summary_text.done": {
+        const e = event as { output_index?: number; summary_index?: number; text?: string };
+        if (typeof e.text === "string") {
+          this.#setReasoningSummary(e.output_index ?? 0, e.summary_index ?? 0, e.text);
+        }
+        break;
+      }
       case "response.function_call_arguments.delta": {
         const e = event as { output_index?: number; delta: string };
         this.#appendArgs(e.output_index ?? 0, e.delta);
@@ -248,6 +270,69 @@ export class XaiStream implements AsyncIterable<XaiStreamEvent>, AsyncDisposable
     while (content.length <= contentIndex) content.push({ type: "output_text", text: "" });
     content[contentIndex] = { type: "output_text", text };
     item.content = content;
+  }
+
+  #ensureReasoningItem(index: number): Record<string, unknown> {
+    while (this.output.length <= index) {
+      this.output.push({ type: "reasoning", summary: [] } as OutputItem);
+    }
+    const item = this.output[index];
+    if (!isRecord(item)) {
+      const next = { type: "reasoning", summary: [] };
+      this.output[index] = next as OutputItem;
+      return next;
+    }
+    const rec = item as Record<string, unknown>;
+    if (rec.type !== "reasoning") rec.type = "reasoning";
+    return rec;
+  }
+
+  #appendReasoningText(index: number, contentIndex: number, delta: string): void {
+    const item = this.#ensureReasoningItem(index);
+    const content = Array.isArray(item.content) ? [...item.content] : [];
+    while (content.length <= contentIndex) content.push({ type: "reasoning_text", text: "" });
+    const part = content[contentIndex];
+    if (isRecord(part) && part.type === "reasoning_text") {
+      content[contentIndex] = {
+        ...part,
+        text: `${typeof part.text === "string" ? part.text : ""}${delta}`,
+      };
+    } else {
+      content[contentIndex] = { type: "reasoning_text", text: delta };
+    }
+    item.content = content;
+  }
+
+  #setReasoningText(index: number, contentIndex: number, text: string): void {
+    const item = this.#ensureReasoningItem(index);
+    const content = Array.isArray(item.content) ? [...item.content] : [];
+    while (content.length <= contentIndex) content.push({ type: "reasoning_text", text: "" });
+    content[contentIndex] = { type: "reasoning_text", text };
+    item.content = content;
+  }
+
+  #appendReasoningSummary(index: number, summaryIndex: number, delta: string): void {
+    const item = this.#ensureReasoningItem(index);
+    const summary = Array.isArray(item.summary) ? [...item.summary] : [];
+    while (summary.length <= summaryIndex) summary.push({ type: "summary_text", text: "" });
+    const part = summary[summaryIndex];
+    if (isRecord(part) && part.type === "summary_text") {
+      summary[summaryIndex] = {
+        ...part,
+        text: `${typeof part.text === "string" ? part.text : ""}${delta}`,
+      };
+    } else {
+      summary[summaryIndex] = { type: "summary_text", text: delta };
+    }
+    item.summary = summary;
+  }
+
+  #setReasoningSummary(index: number, summaryIndex: number, text: string): void {
+    const item = this.#ensureReasoningItem(index);
+    const summary = Array.isArray(item.summary) ? [...item.summary] : [];
+    while (summary.length <= summaryIndex) summary.push({ type: "summary_text", text: "" });
+    summary[summaryIndex] = { type: "summary_text", text };
+    item.summary = summary;
   }
 
   #appendArgs(index: number, delta: string): void {

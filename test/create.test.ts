@@ -136,4 +136,21 @@ describe("responses.create", () => {
       "GET https://api.x.ai/v1/models/grok-4.6",
     ]);
   });
+
+  it("inputItems.list sends pagination as query and request opts separately", async () => {
+    const ac = new AbortController();
+    const { fetch, captured } = mockFetch(() =>
+      jsonResponse({ object: "list", data: [], has_more: false }),
+    );
+    await client(fetch).responses.inputItems.list("resp_123", {
+      after: "item_1",
+      limit: 10,
+      signal: ac.signal,
+    });
+    const url = captured.requests[0]?.url ?? "";
+    expect(url).toContain("/responses/resp_123/input_items");
+    expect(url).toContain("after=item_1");
+    expect(url).toContain("limit=10");
+    expect(url).not.toMatch(/signal=/);
+  });
 });

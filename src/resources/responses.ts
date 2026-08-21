@@ -68,14 +68,14 @@ export class InputItems {
 
   async list(
     id: string,
-    query: { after?: string; before?: string; limit?: number } = {},
-    opts?: RequestOpts,
+    opts: RequestOpts & { after?: string; before?: string; limit?: number } = {},
   ): Promise<InputItemList & { http: import("../types.js").HttpMeta }> {
+    const { after, before, limit, ...requestOpts } = opts;
     const result = await send(this.client, {
       method: "GET",
       path: `/responses/${encodeURIComponent(id)}/input_items`,
-      query,
-      opts,
+      query: { after, before, limit },
+      opts: requestOpts,
     });
     const body = (result.payload ?? { object: "list", data: [] }) as InputItemList;
     return Object.assign(body, { http: result.http });
