@@ -65,6 +65,10 @@ Event names (OpenAI Responses-style; frozen): `ping`, `error`, `response.created
 
 `XAI_DEBUG=1` prints a copy-paste curl with the key redacted. Every result has `res.http` (`status`, `headers`, `requestId`). Pass `{ http: { body: true } }` for the raw JSON body.
 
+## Examples
+
+- [`examples/chat`](examples/chat) — Next.js streaming chat UI using this package and shadcn chat components. Not an official xAI app.
+
 Wire types are generated from `openapi/http.yaml` (Responses + Models only).
 
 ```bash
