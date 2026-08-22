@@ -63,12 +63,20 @@ export function ChatApp() {
   const [requestId, setRequestId] = useState<string | null>(null)
   const priorInputRef = useRef<InputItem[] | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const streamedTextRef = useRef("")
 
   const isBusy = status === "submitted" || status === "streaming"
 
   function stop() {
     abortRef.current?.abort()
     abortRef.current = null
+    if (streamedTextRef.current) {
+      priorInputRef.current = accumulateAfterTurn({
+        sentInput: priorInputRef.current ?? [],
+        responseInput: [{ role: "assistant", content: streamedTextRef.current }],
+      })
+      streamedTextRef.current = ""
+    }
     setStatus("ready")
   }
 
@@ -84,6 +92,9 @@ export function ChatApp() {
       messages,
       userContent: content,
     })
+    // Commit the user turn now so Stop / stream errors keep it in next-turn input.
+    priorInputRef.current = input
+    streamedTextRef.current = ""
 
     setMessages([...nextMessages, assistantMessage])
     setDraft("")
@@ -113,9 +124,11 @@ export function ChatApp() {
       }
 
       let sawDelta = false
+      let sawError = false
       await readChatStream(response, (event) => {
         if (event.type === "delta") {
           sawDelta = true
+          streamedTextRef.current += event.text
           setStatus("streaming")
           setMessages((current) =>
             current.map((message) =>
@@ -125,10 +138,16 @@ export function ChatApp() {
             ),
           )
         } else if (event.type === "done") {
+          if (sawError) return
+          streamedTextRef.current = ""
           if (event.usage) setUsage(event.usage)
           if (event.requestId !== undefined) setRequestId(event.requestId ?? null)
-          priorInputRef.current = accumulateAfterTurn(input, event.toInput)
+          priorInputRef.current = accumulateAfterTurn({
+            sentInput: input,
+            responseInput: event.toInput,
+          })
         } else if (event.type === "error") {
+          sawError = true
           setError(event.message)
         }
       })
@@ -147,8 +166,10 @@ export function ChatApp() {
       const message = err instanceof Error ? err.message : "Chat request failed"
       setError(message)
     } finally {
-      if (abortRef.current === controller) abortRef.current = null
-      setStatus("ready")
+      if (abortRef.current === controller) {
+        abortRef.current = null
+        setStatus("ready")
+      }
     }
   }
 

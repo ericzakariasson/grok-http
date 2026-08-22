@@ -71,14 +71,14 @@ export function buildNextInput(options: {
   return [...history, { role: "user", content: options.userContent }]
 }
 
-export function accumulateAfterTurn(
-  sentInput: InputItem[],
-  responseInput: InputItem[] | undefined,
-): InputItem[] {
-  if (responseInput && responseInput.length > 0) {
-    return [...sentInput, ...responseInput]
+export function accumulateAfterTurn(options: {
+  sentInput: InputItem[]
+  responseInput: InputItem[] | undefined
+}): InputItem[] {
+  if (options.responseInput && options.responseInput.length > 0) {
+    return [...options.sentInput, ...options.responseInput]
   }
-  return sentInput
+  return options.sentInput
 }
 
 export function mapSdkEvent(event: SdkLikeEvent): WireEvent | null {

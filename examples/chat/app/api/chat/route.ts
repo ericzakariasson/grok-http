@@ -64,10 +64,15 @@ export async function POST(request: Request) {
   const readable = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
+        let sawError = false
         for await (const event of stream) {
           const mapped = mapSdkEvent(event)
-          if (mapped) controller.enqueue(encode(mapped))
+          if (mapped) {
+            controller.enqueue(encode(mapped))
+            if (mapped.type === "error") sawError = true
+          }
         }
+        if (sawError || stream.status === "failed") return
         const usage: UsageSummary = {
           input_tokens: stream.usage.input_tokens,
           output_tokens: stream.usage.output_tokens,

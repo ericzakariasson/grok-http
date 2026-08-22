@@ -58,7 +58,10 @@ describe("protocol", () => {
     })
     assert.deepEqual(next, [...prior, { role: "user", content: "Again" }])
     assert.deepEqual(
-      accumulateAfterTurn(next, [{ type: "message", role: "assistant", content: "Sure" }]),
+      accumulateAfterTurn({
+        sentInput: next,
+        responseInput: [{ type: "message", role: "assistant", content: "Sure" }],
+      }),
       [...next, { type: "message", role: "assistant", content: "Sure" }],
     )
   })
