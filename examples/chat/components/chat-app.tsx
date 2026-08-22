@@ -4,6 +4,7 @@ import { useRef, useState, type FormEvent, type KeyboardEvent } from "react"
 import type { InputItem } from "@xai/sdk"
 import { ArrowUpIcon, MessageCircleDashedIcon, SquareIcon } from "lucide-react"
 
+import { ThemeToggle } from "@/components/theme-toggle"
 import { readChatStream } from "@/lib/client-stream"
 import {
   accumulateAfterTurn,
@@ -169,18 +170,21 @@ export function ChatApp() {
   return (
     <MessageScrollerProvider autoScroll>
       <div className="flex h-dvh min-h-0 flex-col bg-background">
-        <header className="flex items-baseline justify-between gap-3 border-b px-4 py-3">
-          <div className="flex flex-col gap-0.5">
-            <h1 className="text-sm font-medium">Grok</h1>
-            <p className="text-xs text-muted-foreground">
-              Chat demo for @xai/sdk. Not an official xAI app.
-            </p>
+        <header className="shrink-0 border-b bg-background">
+          <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3 px-4 py-3">
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <h1 className="text-sm font-medium">Grok</h1>
+              <p className="text-xs text-muted-foreground">
+                Chat demo for @xai/sdk. Not an official xAI app.
+              </p>
+            </div>
+            <ThemeToggle />
           </div>
         </header>
 
         <div className="min-h-0 flex-1">
           {messages.length === 0 ? (
-            <Empty className="h-full">
+            <Empty className="mx-auto h-full max-w-3xl px-4">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <MessageCircleDashedIcon />
@@ -194,7 +198,10 @@ export function ChatApp() {
           ) : (
             <MessageScroller>
               <MessageScrollerViewport>
-                <MessageScrollerContent aria-busy={isBusy} className="px-4 py-6">
+                <MessageScrollerContent
+                  aria-busy={isBusy}
+                  className="mx-auto w-full max-w-3xl px-4 py-6"
+                >
                   {messages.map((message) => (
                     <MessageScrollerItem
                       key={message.id}
@@ -241,46 +248,54 @@ export function ChatApp() {
           )}
         </div>
 
-        <footer className="flex flex-col gap-2 border-t px-4 py-3">
-          <form onSubmit={onSubmit}>
-            <InputGroup>
-              <InputGroupTextarea
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={onKeyDown}
-                placeholder="Ask Grok…"
-                disabled={false}
-                rows={1}
-                aria-label="Message"
-              />
-              <InputGroupAddon align="inline-end">
-                {isBusy ? (
-                  <InputGroupButton
-                    type="button"
-                    variant="default"
-                    size="icon-sm"
-                    aria-label="Stop"
-                    onClick={stop}
-                  >
-                    <SquareIcon />
-                  </InputGroupButton>
-                ) : (
-                  <InputGroupButton
-                    type="submit"
-                    variant="default"
-                    size="icon-sm"
-                    aria-label="Send"
-                    disabled={draft.trim().length === 0}
-                  >
-                    <ArrowUpIcon />
-                  </InputGroupButton>
-                )}
-              </InputGroupAddon>
-            </InputGroup>
-          </form>
-          <p className="text-center text-xs text-muted-foreground">
-            {formatUsage(usage, requestId)}
-          </p>
+        <footer className="shrink-0 border-t bg-background">
+          <div className="mx-auto flex w-full max-w-3xl flex-col gap-1.5 px-4 py-3">
+            <form onSubmit={onSubmit}>
+              <InputGroup
+                data-chat-composer
+                className="h-auto min-h-16 rounded-xl"
+              >
+                <InputGroupTextarea
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder="Ask Grok…"
+                  disabled={false}
+                  rows={1}
+                  aria-label="Message"
+                  className="min-h-16 px-3 py-3"
+                />
+                <InputGroupAddon align="block-end" className="justify-end">
+                  {isBusy ? (
+                    <InputGroupButton
+                      type="button"
+                      variant="default"
+                      size="icon-sm"
+                      className="rounded-full"
+                      aria-label="Stop"
+                      onClick={stop}
+                    >
+                      <SquareIcon />
+                    </InputGroupButton>
+                  ) : (
+                    <InputGroupButton
+                      type="submit"
+                      variant="default"
+                      size="icon-sm"
+                      className="rounded-full"
+                      aria-label="Send"
+                      disabled={draft.trim().length === 0}
+                    >
+                      <ArrowUpIcon />
+                    </InputGroupButton>
+                  )}
+                </InputGroupAddon>
+              </InputGroup>
+            </form>
+            <p className="text-center text-[11px] leading-none text-muted-foreground">
+              {formatUsage(usage, requestId)}
+            </p>
+          </div>
         </footer>
       </div>
     </MessageScrollerProvider>

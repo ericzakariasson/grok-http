@@ -18,12 +18,18 @@ export const metadata: Metadata = {
   description: "Streaming chat demo for @xai/sdk. Not an official xAI app.",
 }
 
+const themeInitScript = `(function(){try{var stored=localStorage.getItem("grok-chat-theme");var theme=stored==="dark"||stored==="light"?stored:window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";if(theme==="dark")document.documentElement.classList.add("dark");}catch(e){}})();`
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`dark style-nova ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`style-nova ${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="min-h-full bg-background text-foreground">{children}</body>
     </html>
   )
