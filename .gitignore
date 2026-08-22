@@ -5,3 +5,6 @@ coverage
 *.log
 .vscode
 .idea
+examples/chat/.next
+examples/chat/.env
+examples/chat/.env.local
