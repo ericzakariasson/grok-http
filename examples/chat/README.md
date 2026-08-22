@@ -43,4 +43,5 @@ That test mocks the stream mapping. It does not call api.x.ai.
 ## Notes
 
 - Model: `grok-4.6` (`models.Grok46`). `store` stays at the SDK default (`false`).
+- Default theme is light. The header toggle persists `light` / `dark` in `localStorage` (`grok-chat-theme`) and falls back to the system preference when unset.
 - shadcn components are the June 2026 radix set (`message-scroller`, `message`, `bubble`, `marker`, `attachment`). Usual install is `npx shadcn@latest add message-scroller message bubble marker`. This demo vendors those files plus nova styles so the app does not depend on ui.shadcn.com at runtime.
