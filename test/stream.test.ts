@@ -94,6 +94,35 @@ describe("responses.create stream", () => {
     expect(types[0]).toBe("unknown");
   });
 
+  it("accumulates reasoning and reasoning-summary deltas onto stream.output", async () => {
+    const events = [
+      {
+        type: "response.output_item.added",
+        output_index: 0,
+        item: { type: "reasoning", id: "rs_1", summary: [] },
+      },
+      { type: "response.reasoning_summary_text.delta", output_index: 0, summary_index: 0, delta: "think " },
+      { type: "response.reasoning_summary_text.delta", output_index: 0, summary_index: 0, delta: "hard" },
+      { type: "response.reasoning_text.delta", output_index: 0, content_index: 0, delta: "priv" },
+      { type: "response.reasoning_text.delta", output_index: 0, content_index: 0, delta: "ate" },
+    ];
+    const { fetch } = mockFetch(() => sseResponse(events));
+    const client = new Xai({ apiKey: "test-key", fetch, maxRetries: 0 });
+    const stream = await client.responses.create({ ...createBody, stream: true });
+    for await (const _ of stream) {
+      // drain
+    }
+    const item = stream.output[0] as {
+      type: string;
+      summary: Array<{ text: string }>;
+      content: Array<{ text: string }>;
+    };
+    expect(item.type).toBe("reasoning");
+    expect(item.summary[0]?.text).toBe("think hard");
+    expect(item.content[0]?.text).toBe("private");
+    expect(stream.toInput()[0]).toMatchObject({ type: "reasoning" });
+  });
+
   it("yields mid-stream 529 as an OverloadedError error event", async () => {
     const { fetch } = mockFetch(() =>
       sseResponse([
