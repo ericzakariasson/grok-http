@@ -1,6 +1,7 @@
 import { DEFAULT_IDLE_TIMEOUT_MS, DEFAULT_MAX_RETRIES, DEFAULT_TIMEOUT_MS, RETRYABLE_STATUS, } from "./constants.js";
 import { debugEnabled } from "./env.js";
 import { APIConnectionError, APIError, AbortError, TimeoutError, errorFromAbort, errorFromResponse, errorFromUnknown, requestIdFromHeaders, } from "./errors.js";
+import { SDK_LANG, SDK_USER_AGENT, SDK_VERSION } from "./version.js";
 export function joinURL(base, path) {
     const b = base.replace(/\/+$/, "");
     const p = path.startsWith("/") ? path : `/${path}`;
@@ -84,6 +85,10 @@ function buildHeaders(client, opts, stream, hasBody) {
         headers.set("content-type", "application/json");
     if (!headers.has("accept"))
         headers.set("accept", stream ? "text/event-stream" : "application/json");
+    if (!headers.has("user-agent"))
+        headers.set("user-agent", SDK_USER_AGENT);
+    headers.set("xai-sdk-version", SDK_VERSION);
+    headers.set("xai-sdk-lang", SDK_LANG);
     return headers;
 }
 function withQuery(url, query) {

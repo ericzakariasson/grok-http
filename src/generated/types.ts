@@ -111,6 +111,7 @@ export interface components {
             min_p?: number | null;
             parallel_tool_calls?: boolean | null;
             previous_response_id?: string | null;
+            /** @description Same id on every turn of a conversation so prompt-cache hits stay on one server (Responses equivalent of x-grok-conv-id). Check usage.input_tokens_details.cached_tokens. */
             prompt_cache_key?: string | null;
             reasoning?: components["schemas"]["ReasoningConfig"];
             /** @enum {string|null} */
