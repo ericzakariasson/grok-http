@@ -20,26 +20,22 @@ describe.skipIf(!hasKey)("live API (CI)", { timeout: 180_000 }, () => {
     expect(res.usage.output_tokens).toBeGreaterThan(0);
   });
 
-  it("stream + abort after ~2s (abort still bills)", async () => {
+  it("stream + abort after first event (abort still bills)", async () => {
     const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 2_000);
+    const stream = await liveClient().responses.create(
+      { model: models.Grok46, input: "Count to 100.", stream: true },
+      { signal: ac.signal },
+    );
     try {
-      const stream = await liveClient().responses.create(
-        { model: models.Grok46, input: "Count to 100.", stream: true },
-        { signal: ac.signal },
-      );
-      try {
-        for await (const ev of stream) {
-          void ev;
-        }
-        expect.fail("expected stream to abort");
-      } finally {
-        await stream[Symbol.asyncDispose]();
+      for await (const ev of stream) {
+        void ev;
+        ac.abort();
       }
+      expect.fail("expected stream to abort");
     } catch (err) {
-      expect(APIError.is(err) && err.isAbort()).toBe(true);
+      if (!(APIError.is(err) && err.isAbort())) throw err;
     } finally {
-      clearTimeout(timer);
+      await stream[Symbol.asyncDispose]();
     }
   });
 
