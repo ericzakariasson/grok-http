@@ -17,6 +17,7 @@ import {
 } from "./errors.js";
 import type { HttpMeta, RequestOpts } from "./types.js";
 import type { Xai } from "./client.js";
+import { SDK_LANG, SDK_USER_AGENT, SDK_VERSION } from "./version.js";
 
 export function joinURL(base: string, path: string): string {
   const b = base.replace(/\/+$/, "");
@@ -97,6 +98,9 @@ function buildHeaders(client: Xai, opts: RequestOpts | undefined, stream: boolea
   if (!headers.has("authorization")) headers.set("authorization", `Bearer ${client.apiKey}`);
   if (hasBody && !headers.has("content-type")) headers.set("content-type", "application/json");
   if (!headers.has("accept")) headers.set("accept", stream ? "text/event-stream" : "application/json");
+  if (!headers.has("user-agent")) headers.set("user-agent", SDK_USER_AGENT);
+  headers.set("xai-sdk-version", SDK_VERSION);
+  headers.set("xai-sdk-lang", SDK_LANG);
   return headers;
 }
 

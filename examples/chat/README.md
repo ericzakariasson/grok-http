@@ -30,7 +30,7 @@ Open http://localhost:3000.
 
 ## Verify
 
-With `XAI_API_KEY` set, send a message. The assistant bubble should fill as `response.output_text.delta` events arrive. Stop cancels the in-flight request via `AbortController`. The next turn sends `input: [...prior.toInput(), { role: "user", content }]`.
+With `XAI_API_KEY` set, send a message. The assistant bubble should fill as `response.output_text.delta` events arrive. Stop cancels the in-flight request via `AbortController`. The next turn sends `input: [...prior.toInput(), { role: "user", content }]` plus the same `prompt_cache_key` for that conversation (client-persisted; not a server session).
 
 Without a key the page still boots; `/api/chat` returns an error.
 

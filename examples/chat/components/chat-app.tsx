@@ -63,6 +63,7 @@ export function ChatApp() {
   const [usage, setUsage] = useState<UsageSummary | null>(null)
   const [requestId, setRequestId] = useState<string | null>(null)
   const priorInputRef = useRef<InputItem[] | null>(null)
+  const conversationIdRef = useRef<string>(newId())
   const abortRef = useRef<AbortController | null>(null)
 
   const isBusy = status === "submitted" || status === "streaming"
@@ -98,7 +99,10 @@ export function ChatApp() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input }),
+        body: JSON.stringify({
+          input,
+          prompt_cache_key: conversationIdRef.current,
+        }),
         signal: controller.signal,
       })
 

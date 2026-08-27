@@ -34,7 +34,21 @@ console.log(res.usage.cost_usd);
 console.log(res.http.requestId);
 ```
 
-`store` defaults to **false** here (wire default is true, 30 days). When `store` is false, the client sends `include: ['reasoning.encrypted_content']` unless you set `include` yourself. Next turn: `input: [...res.toInput(), { role: "user", content: "..." }]` or `previous_response_id` with `store: true`.
+`store` defaults to **false** here (wire default is true, 30 days). When `store` is false, the client sends `include: ['reasoning.encrypted_content']` unless you set `include` yourself.
+
+Next turn, pass the same `prompt_cache_key` every turn of that conversation (prompt-cache hits live on one server; a process-local session helper does not work on a stateless server). Check `usage.input_tokens_details.cached_tokens`.
+
+```ts
+const conversationId = "conv_123"; // same id every turn of this conversation
+
+const next = await client.responses.create({
+  model: "grok-4.6",
+  prompt_cache_key: conversationId,
+  input: [...res.toInput(), { role: "user", content: "And galaxies?" }],
+});
+```
+
+Or use `previous_response_id` with `store: true`.
 
 ## Stream
 
@@ -75,6 +89,7 @@ Wire types are generated from `openapi/http.yaml` (Responses + Models only).
 npm install
 npm run generate   # openapi/http.yaml → src/generated/types.ts
 npm test
+npm run test:live  # spec CI examples; skipped without XAI_API_KEY
 npm run build
 ```
 

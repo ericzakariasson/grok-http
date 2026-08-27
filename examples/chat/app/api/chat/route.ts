@@ -57,6 +57,7 @@ export async function POST(request: Request) {
       model: body.model ?? models.Grok46,
       input,
       stream: true,
+      prompt_cache_key: body.prompt_cache_key,
     },
     { signal: request.signal },
   )

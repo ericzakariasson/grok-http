@@ -38,6 +38,11 @@ export type ChatRequestBody = {
   /** Fallback: rebuild input from the visible transcript. */
   messages?: ChatMessage[]
   model?: string
+  /**
+   * Same id every turn of this conversation so prompt-cache hits stay on one
+   * server. Client-persisted; not a server session store.
+   */
+  prompt_cache_key?: string
 }
 
 /** SDK stream events we care about for this demo. */
